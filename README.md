@@ -30,5 +30,14 @@ variable that needs fixing.
 
 ## Develop
 
-Node 24 and pnpm. `pnpm install`, then `pnpm dev` with the same variables
-exported or in `.env.local`. `pnpm check` runs types, lint and build.
+Node 24 and pnpm. The Docker image is a production build and doesn't hot
+reload, so for development run only Postgres in Docker and the app locally:
+
+1. Create `.env.local` with the database's local address. Next prefers it over
+   `.env`, and the image never sees it:
+   `DATABASE_URL=postgres://blastmap:blastmap@localhost:5432/blastmap`
+2. `pnpm install`
+3. `docker compose up -d db`
+4. `pnpm dev`
+
+`pnpm check` runs types, lint and build.

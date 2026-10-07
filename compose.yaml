@@ -16,6 +16,10 @@ services:
       POSTGRES_USER: blastmap
       POSTGRES_PASSWORD: blastmap
       POSTGRES_DB: blastmap
+    # Published on loopback only, so `pnpm dev` on this machine can reach it
+    # and nothing else on the network can.
+    ports:
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:

@@ -1,4 +1,5 @@
 import { env, EnvError } from "./env";
+import { describeDbError } from "./db/errors";
 import { runMigrations } from "./db/migrate";
 
 // Validate, then migrate, then let Next start serving. Any failure exits the
@@ -20,7 +21,7 @@ export async function startup(): Promise<void> {
   try {
     await runMigrations();
   } catch (err) {
-    console.error(`[blastmap] migrations: failed — ${err instanceof Error ? err.message : String(err)}`);
+    console.error(`[blastmap] migrations: failed — ${describeDbError(err)}`);
     process.exit(1);
   }
 }

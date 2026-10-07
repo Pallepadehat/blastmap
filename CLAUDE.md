@@ -16,6 +16,11 @@ for live progress. An OpenAI-compatible SDK through one wrapped client, set by
 base URL, optional. Traces stored in our own Postgres. Tailwind v4. pnpm. One
 Docker image plus a compose file with Postgres.
 
+UI components are shadcn/ui on Base UI, added with `pnpm dlx shadcn@latest add`
+and owned in the repo. Import `cn` from the `cn` package. The theme tokens in
+the global stylesheet are ours; don't let the CLI overwrite them, and don't add
+`tw-animate-css`, the `shadcn` runtime package or Google fonts.
+
 Next.js 16 and better-auth both change quickly. If you're not certain about an
 API, read the docs inside the installed package rather than going from memory.
 
@@ -166,3 +171,13 @@ Breaking one of these is worse than not finishing.
   loudly.
 - **Don't read from the database on a loop.** Name your columns, limit list
   reads, push progress over SSE instead of polling.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
