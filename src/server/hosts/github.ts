@@ -79,6 +79,10 @@ export const github: HostAdapter = {
     const url = new URL(`${API}/repos/${path}/tarball/${encodeURIComponent(commit)}`);
     return hostStream("github", LABEL, url, await accessToken("github", account), HEADERS);
   },
+
+  fileUrlPrefix(repo: Repository, commit: string): string {
+    return `${repo.webUrl}/blob/${commit}/`;
+  },
 };
 
 function defaultFirst(branches: Branch[], defaultBranch: string | null): Branch[] {

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { HostAuthError, HostRequestError } from "@/server/hosts";
+import { TopBar } from "@/components/top-bar";
 import { requireViewer } from "@/server/session";
 import { ago } from "@/lib/format";
 import { OpenByPath } from "./open-by-path";
@@ -38,7 +39,9 @@ export default async function Repositories() {
   if (rejected) redirect(`/session-ended?host=${rejected.adapter.id}`);
 
   return (
-    <main className="flex flex-col gap-6 p-3">
+    <>
+    <TopBar viewer={viewer} />
+    <main className="flex flex-col gap-6 overflow-auto p-3">
       {sections.length === 0 && (
         <p className="text-muted-foreground">
           You signed in with a host this instance no longer has configured. Sign out and sign in with another.
@@ -63,5 +66,6 @@ export default async function Repositories() {
         </section>
       ))}
     </main>
+    </>
   );
 }
