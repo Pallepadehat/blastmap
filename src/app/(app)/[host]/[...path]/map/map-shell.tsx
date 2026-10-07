@@ -7,15 +7,27 @@ import { adjacency } from "@/graph/analysis";
 import { layout } from "@/graph/layout";
 import { buildTree, foldersAbove } from "@/graph/tree";
 import type { MapData } from "@/graph/types";
+import type { FrameworkResult } from "@/frameworks/types";
 import { firstView, folderId, view } from "@/graph/view";
 import { Canvas, type Focus } from "./canvas";
 import { DetailPanel } from "./detail-panel";
 import { FolderTree } from "./folder-tree";
-import type { MapMeta, Selection } from "./types";
+import { KindList } from "./kind-list";
+import { kindColor, type KindFilter, type MapMeta, type Selection } from "./types";
 
 // The map's shell: folders on the left, canvas in the centre, the selection on
 // the right. Everything after the first render happens here in the browser.
-export function MapShell({ data, meta, initialFile }: { data: MapData; meta: MapMeta; initialFile: string | null }) {
+export function MapShell({
+  data,
+  frameworks,
+  meta,
+  initialFile,
+}: {
+  data: MapData;
+  frameworks: FrameworkResult | null;
+  meta: MapMeta;
+  initialFile: string | null;
+}) {
   const tree = useMemo(() => buildTree(data.files.map((f) => f.path)), [data]);
   const adj = useMemo(() => adjacency(data.edges), [data]);
   const known = useMemo(() => new Set(data.files.map((f) => f.path)), [data]);
@@ -35,6 +47,28 @@ export function MapShell({ data, meta, initialFile }: { data: MapData; meta: Map
       new Set([...(files ?? [])].flatMap((f) => v.boxOf.get(f) ?? []).filter((b) => b !== box));
     return { box, importers: boxesOf(adj.importedBy.get(selection.path)), imports: boxesOf(adj.imports.get(selection.path)) };
   }, [selection, v, adj]);
+
+  // A kind singled out in the left panel: the boxes holding any of its files
+  // stay bright.
+  const [kindFilter, setKindFilter] = useState<KindFilter>(null);
+  const bright = useMemo(() => {
+    if (!kindFilter || !frameworks) return null;
+    const boxes = new Set<string>();
+    for (const f of data.files) {
+      const kind = frameworks.kinds[f.path];
+      const matches = kindFilter === "none" ? kind === undefined : kind === kindFilter;
+      const box = matches ? v.boxOf.get(f.path) : undefined;
+      if (box) boxes.add(box);
+    }
+    return boxes;
+  }, [kindFilter, frameworks, data.files, v]);
+  const colorOf = useCallback(
+    (path: string) => {
+      const kind = frameworks?.kinds[path];
+      return kind ? kindColor(kind) : null;
+    },
+    [frameworks],
+  );
 
   const selectedBox =
     selection?.kind === "file" ? (v.boxOf.get(selection.path) ?? null) : selection ? folderId(selection.path) : null;
@@ -78,6 +112,13 @@ export function MapShell({ data, meta, initialFile }: { data: MapData; meta: Map
           onToggle={(path) => setFolder(path, !open.has(path))}
           onSelect={selectFolder}
         />
+        <KindList
+          frameworks={frameworks}
+          fileCount={data.files.length}
+          filter={kindFilter}
+          meta={meta}
+          onFilter={setKindFilter}
+        />
       </aside>
 
       <section className="relative min-h-0" aria-label="Map">
@@ -95,6 +136,8 @@ export function MapShell({ data, meta, initialFile }: { data: MapData; meta: Map
             lines={v.lines}
             placed={placed}
             focus={focus}
+            bright={bright}
+            colorOf={colorOf}
             selectedBox={selectedBox}
             onOpen={openFolder}
             onClose={closeFolder}
@@ -106,7 +149,7 @@ export function MapShell({ data, meta, initialFile }: { data: MapData; meta: Map
       </section>
 
       <aside className="min-h-0 border-l">
-        <DetailPanel data={data} adj={adj} meta={meta} selection={selection} onSelectFile={selectFile} />
+        <DetailPanel data={data} frameworks={frameworks} adj={adj} meta={meta} selection={selection} onSelectFile={selectFile} />
       </aside>
     </div>
   );

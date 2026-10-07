@@ -1,0 +1,1 @@
+ALTER TABLE "mapping" ADD COLUMN "frameworks" jsonb;

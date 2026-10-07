@@ -1,4 +1,5 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
+import { ADAPTERS_VERSION, type FrameworkResult } from "@/frameworks";
 import type { ParseResult } from "@/parser";
 import { db } from "../db/client";
 import type { Branch } from "../hosts";
@@ -29,6 +30,9 @@ export type MappingDetail = MappingSummary & {
   progress: MappingProgress | null;
   // Only once it's done.
   result: ParseResult | null;
+  // Only once it's done, and null for mappings made before the framework
+  // adapters existed.
+  frameworks: FrameworkResult | null;
 };
 
 const RECENT_LIMIT = 20;
@@ -82,16 +86,13 @@ export async function mappingDetail(
   if (!row) return null;
 
   // The result can be megabytes; read it only when there is one to show.
-  let result: ParseResult | null = null;
-  if (row.status === "done") {
-    const [withResult] = await db()
-      .select({ result: mapping.result })
-      .from(mapping)
-      .where(where(host, r.repo.path, commit))
-      .limit(1);
-    result = withResult?.result ?? null;
-  }
-  return { ...row, result };
+  if (row.status !== "done") return { ...row, result: null, frameworks: null };
+  const [full] = await db()
+    .select({ result: mapping.result, frameworks: mapping.frameworks })
+    .from(mapping)
+    .where(where(host, r.repo.path, commit))
+    .limit(1);
+  return { ...row, result: full?.result ?? null, frameworks: full?.frameworks ?? null };
 }
 
 export type StartResult = { commit: string } | { error: string };
@@ -141,6 +142,30 @@ export async function startMapping(
     enqueue({ id: row.id, host, path: r.repo.path, commit, account: r.account });
   }
   return { commit };
+}
+
+// Maps a commit again when its mapping predates the current framework adapters
+// (none at all, or an older ADAPTERS_VERSION), so it picks up their kinds and
+// routes. Anything else is left alone: a commit's code doesn't change, so
+// mapping it again would give the same answer.
+export async function remapOutdated(viewer: Viewer, host: string, path: string, commit: string): Promise<boolean | null> {
+  if (!COMMIT.test(commit)) return null;
+  const r = await readable(viewer, host, path);
+  if (!r) return null;
+  const [row] = await db()
+    .update(mapping)
+    .set({ status: "queued", progress: null, error: null, startedBy: viewer.userId, finishedAt: null })
+    .where(
+      and(
+        where(host, r.repo.path, commit),
+        eq(mapping.status, "done"),
+        sql`coalesce((${mapping.frameworks}->>'version')::int, 0) < ${ADAPTERS_VERSION}`,
+      ),
+    )
+    .returning({ id: mapping.id });
+  if (!row) return false;
+  enqueue({ id: row.id, host, path: r.repo.path, commit, account: r.account });
+  return true;
 }
 
 export type MappingFeed = {

@@ -28,7 +28,7 @@ export type Focus = {
   imports: Set<string>;
 };
 
-type BoxData = { box: Box; dim: boolean; selected: boolean; onClose: () => void };
+type BoxData = { box: Box; dim: boolean; selected: boolean; color: string | null; onClose: () => void };
 type BoxNode = Node<BoxData, "box" | "frame">;
 type LineData = { count: number; tone: "incoming" | "outgoing" | null; dim: boolean };
 type LineEdge = Edge<LineData, "line">;
@@ -40,6 +40,8 @@ export function Canvas({
   lines,
   placed,
   focus,
+  bright,
+  colorOf,
   selectedBox,
   onOpen,
   onClose,
@@ -51,6 +53,10 @@ export function Canvas({
   lines: Line[];
   placed: Map<string, Placed>;
   focus: Focus | null;
+  // When set, only these boxes stay bright (a kind is singled out).
+  bright: Set<string> | null;
+  // A file's kind colour, if it has a kind.
+  colorOf: (path: string) => string | null;
   selectedBox: string | null;
   onOpen: (folder: string) => void;
   onClose: (folder: string) => void;
@@ -73,13 +79,14 @@ export function Canvas({
           ...(box.parent && { parentId: box.parent }),
           data: {
             box,
-            dim: box.kind !== "frame" && !related(box.id),
+            dim: box.kind !== "frame" && (!related(box.id) || (bright !== null && !bright.has(box.id))),
             selected: box.id === selectedBox,
+            color: box.kind === "file" ? colorOf(box.path) : null,
             onClose: () => box.kind === "frame" && onClose(box.folder.path),
           },
         };
       });
-  }, [boxes, placed, focus, selectedBox, onClose]);
+  }, [boxes, placed, focus, bright, colorOf, selectedBox, onClose]);
 
   const edges = useMemo<LineEdge[]>(
     () =>
@@ -140,6 +147,9 @@ function BoxView({ data }: NodeProps<BoxNode>) {
         data.selected && "border-primary ring-1 ring-primary",
         data.dim && "opacity-30",
       )}
+      // A file's kind shows as a coloured left edge; folders hold mixed kinds
+      // and stay grey.
+      style={data.color ? { borderLeftColor: data.color, borderLeftWidth: 3 } : undefined}
       title={box.kind === "file" ? box.path : box.kind === "folder" ? box.folder.path : undefined}
     >
       <Handle type="target" position={Position.Top} isConnectable={false} className="invisible" />

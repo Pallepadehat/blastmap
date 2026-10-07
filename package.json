@@ -17,7 +17,8 @@
     "lint": "eslint .",
     "check": "pnpm typecheck && pnpm lint && pnpm build",
     "db:generate": "drizzle-kit generate",
-    "parse": "node scripts/parse.ts"
+    "parse": "node scripts/parse.ts",
+    "frameworks": "node scripts/frameworks.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { eq, inArray, sql } from "drizzle-orm";
 import { extract } from "tar";
+import { analyseFrameworks, type FrameworkResult } from "@/frameworks";
 import { parseDirectory, type ParseResult } from "@/parser";
 import { db } from "../db/client";
 import { adapterFor, HostAuthError, HostRequestError, type HostAccount, type HostAdapter } from "../hosts";
@@ -100,10 +101,13 @@ async function run(job: Job) {
       onProgress: (p) => reporter.progress({ step: "parsing", ...p }),
     });
     await reporter.flush();
+    // Kinds and routes, from the same unpacked files. Part of the parsing
+    // step: it's quick next to parsing, and a separate step would only flash by.
+    const frameworks = await analyseFrameworks(source, result);
 
     step = "saving";
     await reporter.step("saving", null);
-    await reporter.done(result);
+    await reporter.done(result, frameworks);
   } catch (err) {
     await reporter.fail(`${step}: ${describe(err, adapter)}`);
   } finally {
@@ -168,8 +172,8 @@ class Reporter {
     await this.write({ status: this.status, progress: this.latest });
   }
 
-  async done(result: ParseResult) {
-    await this.write({ status: "done", progress: null, error: null, result, finishedAt: new Date() });
+  async done(result: ParseResult, frameworks: FrameworkResult) {
+    await this.write({ status: "done", progress: null, error: null, result, frameworks, finishedAt: new Date() });
     publish(this.id, { status: "done", progress: null, error: null });
   }
 
