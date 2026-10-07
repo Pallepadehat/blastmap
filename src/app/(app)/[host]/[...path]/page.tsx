@@ -2,17 +2,21 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { cn } from "cn";
+import { TopBar } from "@/components/top-bar";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import type { MapData } from "@/graph/types";
+import type { ParseResult } from "@/parser";
 import { ago, shortCommit } from "@/lib/format";
 import { HostAuthError, HostRequestError } from "@/server/hosts";
 import { mappingDetail, repositoryOverview, type MappingDetail } from "@/server/mappings";
 import { requireViewer } from "@/server/session";
 import { CoverageReport } from "./coverage-report";
 import { MapForm } from "./map-form";
+import { MapShell } from "./map/map-shell";
 import { MappingProgress } from "./mapping-progress";
 
 type Params = Promise<{ host: string; path: string[] }>;
-type SearchParams = Promise<{ commit?: string }>;
+type SearchParams = Promise<{ commit?: string; view?: string; file?: string }>;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   // Only what's already in the URL, so the title can't leak anything either.
@@ -23,7 +27,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 export default async function RepositoryPage({ params, searchParams }: { params: Params; searchParams: SearchParams }) {
   const viewer = await requireViewer();
   const { host, path: segments } = await params;
-  const { commit } = await searchParams;
+  const { commit, view, file } = await searchParams;
   const path = segments.join("/");
 
   let loaded;
@@ -35,12 +39,15 @@ export default async function RepositoryPage({ params, searchParams }: { params:
     if (err instanceof HostAuthError) redirect(`/session-ended?host=${err.host}`);
     if (!(err instanceof HostRequestError)) throw err;
     return (
-      <main className="p-3">
-        <Alert variant="destructive">
-          <AlertTitle>Couldn&apos;t reach the host</AlertTitle>
-          <AlertDescription className="font-mono text-xs">{err.message}</AlertDescription>
-        </Alert>
-      </main>
+      <>
+        <TopBar viewer={viewer} crumbs={[{ label: path, mono: true }]} />
+        <main className="p-3">
+          <Alert variant="destructive">
+            <AlertTitle>Couldn&apos;t reach the host</AlertTitle>
+            <AlertDescription className="font-mono text-xs">{err.message}</AlertDescription>
+          </Alert>
+        </main>
+      </>
     );
   }
 
@@ -50,9 +57,35 @@ export default async function RepositoryPage({ params, searchParams }: { params:
   if (!overview || (commit && !detail)) notFound();
   const { adapter, repo, branches, mappings } = overview;
   const base = `/${host}/${repo.path}`;
+  const repoCrumb = { label: repo.path, href: base, mono: true };
+
+  // A finished mapping opens as the map; its coverage report is one link away.
+  if (detail?.status === "done" && detail.result && view !== "coverage") {
+    const crumbs = [repoCrumb, { label: `${detail.branch} @ ${shortCommit(detail.commit)}`, mono: true, muted: true }];
+    return (
+      <>
+        <TopBar viewer={viewer} crumbs={crumbs} />
+        <MapShell
+          data={mapData(detail.result)}
+          initialFile={file ?? null}
+          meta={{
+            hostLabel: adapter.label,
+            repoPath: repo.path,
+            branch: detail.branch,
+            commit: detail.commit,
+            fileUrlPrefix: adapter.fileUrlPrefix(repo, detail.commit),
+            coverageHref: `${base}?commit=${detail.commit}&view=coverage`,
+            imports: detail.result.coverage.imports,
+          }}
+        />
+      </>
+    );
+  }
 
   return (
-    <main className="flex flex-col gap-5 p-3">
+    <>
+    <TopBar viewer={viewer} crumbs={[repoCrumb]} />
+    <main className="flex flex-col gap-5 overflow-y-auto p-3">
       <header className="flex flex-col gap-0.5">
         <h1 className="font-mono font-semibold">
           <Link href={base} className="hover:underline">
@@ -76,6 +109,14 @@ export default async function RepositoryPage({ params, searchParams }: { params:
             <span className="font-mono font-semibold">{detail.branch}</span>{" "}
             <span className="font-mono text-muted-foreground">@ {shortCommit(detail.commit)}</span>
             <span className="text-muted-foreground"> · started {ago(detail.createdAt)}</span>
+            {detail.status === "done" && (
+              <>
+                {" · "}
+                <Link href={`${base}?commit=${detail.commit}`} className="text-primary underline-offset-4 hover:underline">
+                  open the map
+                </Link>
+              </>
+            )}
           </h2>
           <MappingBody detail={detail} src={`/api/mapping-events${base}?commit=${commit}`} />
         </section>
@@ -111,7 +152,25 @@ export default async function RepositoryPage({ params, searchParams }: { params:
         )}
       </section>
     </main>
+    </>
   );
+}
+
+// The parser's result, slimmed to what the map needs in the browser: no
+// external imports, and one edge per pair of files whatever the import kind.
+function mapData(result: ParseResult): MapData {
+  const seen = new Set<string>();
+  const edges = result.edges.filter((e) => {
+    const key = `${e.from}\0${e.to}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  return {
+    files: result.files.map((f) => ({ path: f.path, skipped: f.status === "skipped" })),
+    edges: edges.map((e) => ({ from: e.from, to: e.to })),
+    unresolved: result.unresolved.map(({ from, specifier, reason, detail }) => ({ from, specifier, reason, detail })),
+  };
 }
 
 function MappingBody({ detail, src }: { detail: MappingDetail; src: string }) {

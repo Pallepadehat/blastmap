@@ -97,6 +97,10 @@ export const gitlab: HostAdapter = {
     url.search = new URLSearchParams({ sha: commit }).toString();
     return hostStream("gitlab", LABEL, url, await accessToken("gitlab", account));
   },
+
+  fileUrlPrefix(repo: Repository, commit: string): string {
+    return `${repo.webUrl}/-/blob/${commit}/`;
+  },
 };
 
 // Seeing a project isn't the same as reading its code: a guest on a private

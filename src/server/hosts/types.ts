@@ -44,6 +44,10 @@ export type HostAdapter = {
   branchCommit(account: HostAccount, path: string, branch: string): Promise<string | null>;
   // The repository at an exact commit, streamed as the host sends it.
   archive(account: HostAccount, path: string, commit: string): Promise<Archive>;
+  // Where files are shown on the host's website at an exact commit: append a
+  // repository-relative path with each segment URL-encoded. A prefix rather
+  // than a per-file function, so the browser can build links for any file.
+  fileUrlPrefix(repo: Repository, commit: string): string;
 };
 
 // The host rejected the user's token (revoked, expired, unrefreshable). The
