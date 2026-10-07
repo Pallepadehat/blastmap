@@ -16,6 +16,11 @@ for live progress. An OpenAI-compatible SDK through one wrapped client, set by
 base URL, optional. Traces stored in our own Postgres. Tailwind v4. pnpm. One
 Docker image plus a compose file with Postgres.
 
+UI components are shadcn/ui on Base UI, added with `pnpm dlx shadcn@latest add`
+and owned in the repo. Import `cn` from the `cn` package. The theme tokens in
+the global stylesheet are ours; don't let the CLI overwrite them, and don't add
+`tw-animate-css`, the `shadcn` runtime package or Google fonts.
+
 Next.js 16 and better-auth both change quickly. If you're not certain about an
 API, read the docs inside the installed package rather than going from memory.
 
