@@ -10,8 +10,9 @@ You get folders as boxes and imports as lines. Select a file to see what it
 imports, what imports it, and what breaks two levels out if it changes.
 
 > **Status: early development.** Signing in, mapping a repository, the coverage
-> report and the map all work. Framework awareness (routes, file roles) and the
-> AI panels are still to come. Expect breaking changes until a first release.
+> report, the map, and file kinds and routes for Next.js and NestJS all work.
+> The AI panels are still to come. Expect breaking changes until a first
+> release.
 
 ## What it does
 
@@ -21,6 +22,12 @@ imports, what imports it, and what breaks two levels out if it changes.
 - **Never guesses an edge.** A line exists only because an import resolved to a
   real file. Every import that didn't resolve is listed with its reason in a
   coverage report, and the map tells you when it's partial.
+- **Knows Next.js and NestJS.** Files get a kind (page, route handler,
+  controller, service, module and so on) from convention, never from guessing.
+  Routes are listed with method, path and line, but only when both the method
+  and the full path can be read from the code; the rest are counted as left
+  out, with the reason. Other frameworks plug in as adapters; see
+  [docs/adapters.md](docs/adapters.md).
 - **Shows the blast radius.** For any file you see its importers, and theirs
   one level further out. This is arithmetic in your browser, not a model's
   opinion.

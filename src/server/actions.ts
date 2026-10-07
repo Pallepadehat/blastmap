@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "./auth";
 import { adapterFor, HostAuthError, HostRequestError } from "./hosts";
-import { startMapping, type StartResult } from "./mappings";
+import { remapOutdated, startMapping, type StartResult } from "./mappings";
 import { requireViewer } from "./session";
 
 // Starts the host's OAuth flow. `host` comes from the browser, so it's checked
@@ -43,4 +43,16 @@ export async function mapBranch(host: string, path: string, _prev: MapState, for
   if (!result) return { error: "Not found." };
   if ("error" in result) return result;
   redirect(`/${host}/${path}?commit=${result.commit}`);
+}
+
+// "Map again" on a mapping made before kinds and routes existed.
+export async function remapCommit(host: string, path: string, commit: string): Promise<void> {
+  const viewer = await requireViewer();
+  try {
+    await remapOutdated(viewer, host, path, commit);
+  } catch (err) {
+    if (err instanceof HostAuthError) redirect(`/session-ended?host=${err.host}`);
+    throw err;
+  }
+  redirect(`/${host}/${path}?commit=${commit}`);
 }

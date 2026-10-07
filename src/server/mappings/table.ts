@@ -1,4 +1,5 @@
 import { index, jsonb, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
+import type { FrameworkResult } from "@/frameworks";
 import type { ParseResult } from "@/parser";
 import { user } from "../db/schema";
 
@@ -38,6 +39,9 @@ export const mapping = pgTable(
     progress: jsonb("progress").$type<MappingProgress>(),
     error: text("error"),
     result: jsonb("result").$type<ParseResult>(),
+    // What the framework adapters found. Null on mappings made before they
+    // existed, which is different from "no framework found".
+    frameworks: jsonb("frameworks").$type<FrameworkResult>(),
     startedBy: text("started_by").references(() => user.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),

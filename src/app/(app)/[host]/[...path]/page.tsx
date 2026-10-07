@@ -67,8 +67,10 @@ export default async function RepositoryPage({ params, searchParams }: { params:
         <TopBar viewer={viewer} crumbs={crumbs} />
         <MapShell
           data={mapData(detail.result)}
+          frameworks={detail.frameworks}
           initialFile={file ?? null}
           meta={{
+            host,
             hostLabel: adapter.label,
             repoPath: repo.path,
             branch: detail.branch,

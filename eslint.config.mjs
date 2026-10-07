@@ -25,9 +25,10 @@ export default defineConfig([
     },
   },
   {
-    // The parser is standalone: directory in, data out, runnable from a plain
-    // script. It can't depend on the app around it (CLAUDE.md).
-    files: ["src/parser/**"],
+    // The parser and the framework adapters are standalone: directory in, data
+    // out, runnable from a plain script. They can't depend on the app around
+    // them (CLAUDE.md).
+    files: ["src/parser/**", "src/frameworks/**"],
     rules: {
       "no-restricted-imports": [
         "error",
@@ -35,11 +36,11 @@ export default defineConfig([
           patterns: [
             {
               group: ["next", "next/*", "react", "react/*", "react-dom", "react-dom/*", "drizzle-orm", "drizzle-orm/*", "postgres"],
-              message: "The parser can't import the framework or the database.",
+              message: "Standalone code can't import the framework or the database.",
             },
             {
               group: ["@/*", "**/server/**", "**/app/**", "**/components/**"],
-              message: "The parser can't import app code.",
+              message: "Standalone code can't import app code.",
             },
           ],
         },
@@ -50,7 +51,7 @@ export default defineConfig([
     // Every read of analysis data goes through the data-access layer in
     // src/server/mappings, which checks access with the host first (CLAUDE.md).
     files: ["src/**"],
-    ignores: ["src/server/mappings/**", "src/parser/**"],
+    ignores: ["src/server/mappings/**", "src/parser/**", "src/frameworks/**"],
     rules: {
       "no-restricted-imports": [
         "error",

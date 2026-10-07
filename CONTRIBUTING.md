@@ -65,6 +65,7 @@ The parser runs on its own, with no database or environment:
 ```sh
 pnpm parse path/to/a/repo          # summary
 pnpm parse path/to/a/repo --json   # everything
+pnpm frameworks path/to/a/repo     # kinds and routes from the framework adapters
 ```
 
 ## How the code is laid out
@@ -72,6 +73,12 @@ pnpm parse path/to/a/repo --json   # everything
 - `src/parser`: the standalone parser. Directory in, files, edges and coverage
   out. It can't import Next, React, the database or any host code, and lint
   enforces that.
+- `src/frameworks`: framework adapters (Next.js, NestJS) that give files a
+  kind and recover routes. Standalone like the parser, and the only place that
+  knows any framework exists. A new framework is a new adapter: see
+  [docs/adapters.md](docs/adapters.md). With an AI agent, "add an adapter for
+  <framework>" runs the project's `add-framework-adapter` skill, which follows
+  the same guide. It lives in `.agents/skills`; `.claude/skills` links to it.
 - `src/graph`: pure functions over files and edges (folder tree, layout, blast
   radius). Nothing to fetch, nothing to mock.
 - `src/server/hosts`: one adapter per git host behind a single interface. Host

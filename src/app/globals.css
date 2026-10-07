@@ -41,6 +41,15 @@
   --outgoing: light-dark(oklch(0.62 0.15 70), oklch(0.78 0.15 75));
 
   --destructive: light-dark(oklch(0.577 0.245 27.325), oklch(0.704 0.191 22.216));
+
+  /* What kind of thing a file is, in five groups. Hues kept clear of the
+     blue, green, amber and red above; tests and config are deliberately
+     quieter than the code that runs. */
+  --kind-entry: light-dark(oklch(0.55 0.2 300), oklch(0.72 0.17 300));
+  --kind-logic: light-dark(oklch(0.58 0.11 195), oklch(0.75 0.11 195));
+  --kind-wiring: light-dark(oklch(0.58 0.19 350), oklch(0.74 0.15 350));
+  --kind-test: light-dark(oklch(0.6 0.06 230), oklch(0.7 0.06 230));
+  --kind-config: light-dark(oklch(0.58 0.05 60), oklch(0.7 0.05 60));
 }
 
 :root.light {
@@ -91,6 +100,11 @@
   --color-destructive: var(--destructive);
   --color-incoming: var(--incoming);
   --color-outgoing: var(--outgoing);
+  --color-kind-entry: var(--kind-entry);
+  --color-kind-logic: var(--kind-logic);
+  --color-kind-wiring: var(--kind-wiring);
+  --color-kind-test: var(--kind-test);
+  --color-kind-config: var(--kind-config);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);

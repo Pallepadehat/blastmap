@@ -15,6 +15,13 @@
       "when": 1791384919686,
       "tag": "0001_mappings",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791404399802,
+      "tag": "0002_frameworks",
+      "breakpoints": true
     }
   ]
 }
