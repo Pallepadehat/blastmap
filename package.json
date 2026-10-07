@@ -2,6 +2,12 @@
   "name": "blastmap",
   "version": "0.0.0",
   "private": true,
+  "description": "Self-hosted dependency maps of GitHub and GitLab repositories, from really parsing the code.",
+  "license": "FSL-1.1-ALv2",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Pallepadehat/blastmap.git"
+  },
   "type": "module",
   "scripts": {
     "dev": "NEXT_TELEMETRY_DISABLED=1 next dev",
