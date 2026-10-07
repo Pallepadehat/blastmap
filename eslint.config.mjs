@@ -47,6 +47,25 @@ export default defineConfig([
     },
   },
   {
+    // Every read of analysis data goes through the data-access layer in
+    // src/server/mappings, which checks access with the host first (CLAUDE.md).
+    files: ["src/**"],
+    ignores: ["src/server/mappings/**", "src/parser/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/mappings/table", "@/server/mappings/table"],
+              message: "Query mappings through the data-access layer in src/server/mappings.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ["src/server/env.ts"],
     rules: { "no-restricted-properties": ["error", GET_ACCESS_TOKEN] },
   },

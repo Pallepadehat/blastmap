@@ -11,7 +11,7 @@ if (!dir) {
   process.exitCode = 2;
 } else {
   const started = performance.now();
-  const result = parseDirectory(dir);
+  const result = await parseDirectory(dir);
   const seconds = (performance.now() - started) / 1000;
   // No process.exit() after printing: it cuts piped output off before it drains.
   console.log(args.includes("--json") ? JSON.stringify(result, null, 2) : summary(dir, result, seconds));

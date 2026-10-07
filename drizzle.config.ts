@@ -4,6 +4,6 @@ import { defineConfig } from "drizzle-kit";
 // startup, so drizzle-kit never needs a database connection.
 export default defineConfig({
   dialect: "postgresql",
-  schema: "./src/server/db/schema.ts",
+  schema: ["./src/server/db/schema.ts", "./src/server/mappings/table.ts"],
   out: "./drizzle",
 });

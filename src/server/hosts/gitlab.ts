@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { env } from "../env";
-import { accessToken, hostGet, parseBody, unexpected } from "./request";
-import { type HostAccount, type HostAdapter, type Repository } from "./types";
+import { accessToken, hostGet, hostStream, parseBody, unexpected } from "./request";
+import type { Branch, HostAccount, HostAdapter, Repository } from "./types";
 
 const LABEL = "GitLab";
 
@@ -22,7 +22,11 @@ const projectSchema = z.object({
       group_access: z.object({ access_level: z.number() }).nullable().optional(),
     })
     .optional(),
+  // Only present for members with Reporter access or above.
+  statistics: z.object({ repository_size: z.number() }).optional(),
 });
+
+const branchSchema = z.object({ name: z.string(), default: z.boolean(), commit: z.object({ id: z.string() }) });
 
 type Project = z.infer<typeof projectSchema>;
 
@@ -56,6 +60,7 @@ export const gitlab: HostAdapter = {
   async readableRepository(account: HostAccount, path: string): Promise<Repository | null> {
     if (!PATH.test(path)) return null;
     const url = api(`/projects/${encodeURIComponent(path)}`);
+    url.search = new URLSearchParams({ statistics: "true" }).toString();
     const res = await hostGet("gitlab", LABEL, url, await accessToken("gitlab", account));
     // GitLab answers 404 for a project the user can't see; 403 for one they
     // can see but not read in this way. Both mean "not readable".
@@ -63,6 +68,34 @@ export const gitlab: HostAdapter = {
     if (res.status !== 200) throw unexpected(LABEL, url, res);
     const project = parseBody(LABEL, projectSchema, res.body, url);
     return canReadCode(project) ? toRepository(project) : null;
+  },
+
+  async listBranches(account: HostAccount, repo: Repository): Promise<Branch[]> {
+    const url = api(`/projects/${encodeURIComponent(repo.path)}/repository/branches`);
+    url.search = new URLSearchParams({ per_page: "100" }).toString();
+    const res = await hostGet("gitlab", LABEL, url, await accessToken("gitlab", account));
+    if (res.status !== 200) throw unexpected(LABEL, url, res);
+    const branches = parseBody(LABEL, z.array(branchSchema), res.body, url);
+    // GitLab marks the default branch itself; put it first, keep the rest in order.
+    return [...branches.filter((b) => b.default), ...branches.filter((b) => !b.default)].map((b) => ({
+      name: b.name,
+      commit: b.commit.id,
+    }));
+  },
+
+  async branchCommit(account: HostAccount, path: string, branch: string): Promise<string | null> {
+    if (!PATH.test(path)) return null;
+    const url = api(`/projects/${encodeURIComponent(path)}/repository/branches/${encodeURIComponent(branch)}`);
+    const res = await hostGet("gitlab", LABEL, url, await accessToken("gitlab", account));
+    if (res.status === 404) return null;
+    if (res.status !== 200) throw unexpected(LABEL, url, res);
+    return parseBody(LABEL, branchSchema, res.body, url).commit.id;
+  },
+
+  async archive(account: HostAccount, path: string, commit: string) {
+    const url = api(`/projects/${encodeURIComponent(path)}/repository/archive.tar.gz`);
+    url.search = new URLSearchParams({ sha: commit }).toString();
+    return hostStream("gitlab", LABEL, url, await accessToken("gitlab", account));
   },
 };
 
@@ -86,6 +119,7 @@ function toRepository(p: Project): Repository {
     defaultBranch: p.default_branch ?? null,
     updatedAt: new Date(p.last_activity_at),
     webUrl: p.web_url,
+    sizeBytes: p.statistics?.repository_size ?? null,
   };
 }
 

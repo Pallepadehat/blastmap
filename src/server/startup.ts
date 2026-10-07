@@ -1,6 +1,7 @@
 import { env, EnvError } from "./env";
 import { describeDbError } from "./db/errors";
 import { runMigrations } from "./db/migrate";
+import { failInterrupted } from "./mappings";
 
 // Validate, then migrate, then let Next start serving. Any failure exits the
 // process: a server that's up with a broken environment is worse than one that
@@ -24,4 +25,9 @@ export async function startup(): Promise<void> {
     console.error(`[blastmap] migrations: failed — ${describeDbError(err)}`);
     process.exit(1);
   }
+
+  // Mappings run in this process, so any left in progress belonged to the
+  // previous one and will never finish.
+  const interrupted = await failInterrupted();
+  if (interrupted > 0) console.log(`[blastmap] mappings: ${interrupted} interrupted by the restart, marked failed`);
 }

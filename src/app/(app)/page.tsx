@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { HostAuthError, HostRequestError } from "@/server/hosts";
 import { requireViewer } from "@/server/session";
-import { ago } from "./format";
+import { ago } from "@/lib/format";
 import { OpenByPath } from "./open-by-path";
 import { RepositoryList, type RepositoryRow } from "./repository-list";
 
