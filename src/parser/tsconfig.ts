@@ -33,7 +33,9 @@ export class TsconfigLookup {
     if (known) return known;
 
     let config: ResolutionConfig;
-    const file = CONFIG_NAMES.map((n) => path.join(dir, n)).find((f) => this.host.fileExists(f));
+    // path.resolve, not path.join: Next's build reads path.join(dir, name) as
+    // "any file in the project" and copies the whole project into the image.
+    const file = CONFIG_NAMES.map((n) => path.resolve(dir, n)).find((f) => this.host.fileExists(f));
     if (file) {
       config = this.load(file);
     } else if (dir === this.root) {

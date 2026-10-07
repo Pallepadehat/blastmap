@@ -56,6 +56,38 @@ export async function hostGet(
   return { status: res.status, body };
 }
 
+// GET a host URL as the user and hand back the body as a stream, for archives.
+// Fails like hostGet for anything but 200.
+export async function hostStream(
+  host: HostId,
+  label: string,
+  url: URL,
+  token: string,
+  headers: Record<string, string> = {},
+): Promise<{ body: ReadableStream<Uint8Array>; length: number | null }> {
+  const what = `${label} GET ${url.pathname}${url.search}`;
+  let res: Response;
+  try {
+    // No timeout on the whole download, only on getting a response: a large
+    // archive legitimately takes a while.
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(new DOMException("timeout", "TimeoutError")), TIMEOUT_MS);
+    res = await fetch(url, {
+      headers: { ...headers, Authorization: `Bearer ${token}`, "User-Agent": "blastmap" },
+      signal: controller.signal,
+      cache: "no-store",
+    }).finally(() => clearTimeout(timer));
+  } catch (err) {
+    throw new HostRequestError(`${what}: no response (${describeFetchError(err)})`);
+  }
+  if (res.status === 401) throw new HostAuthError(host, `${what} returned 401`);
+  if (res.status !== 200 || !res.body) {
+    throw unexpected(label, url, { status: res.status, body: await res.text().catch(() => "") });
+  }
+  const length = Number(res.headers.get("content-length"));
+  return { body: res.body, length: Number.isFinite(length) && length > 0 ? length : null };
+}
+
 export function unexpected(label: string, url: URL, res: HostResponse): HostRequestError {
   const detail =
     typeof res.body === "object" && res.body !== null && "message" in res.body

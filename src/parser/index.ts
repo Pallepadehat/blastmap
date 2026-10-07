@@ -22,9 +22,21 @@ export type * from "./types.ts";
 // Larger files are almost always generated or bundled output.
 const MAX_FILE_BYTES = 1024 * 1024;
 
+// Parsing a large repository takes seconds of CPU. Handing control back every
+// so many files keeps a server process answering requests, and lets progress
+// be reported while it runs.
+const YIELD_EVERY = 50;
+
+// Both passes over the files, counted separately: `read` files have been
+// loaded and parsed into syntax trees, `resolved` ones have had their imports
+// resolved. Each runs from 0 to `total`.
+export type ParseProgress = { total: number; read: number; resolved: number };
+
+export type ParseOptions = { onProgress?: (progress: ParseProgress) => void };
+
 // Directory path in, files, edges and coverage out. Standalone by design: no
 // framework, database, git host or environment, so it runs from a plain script.
-export function parseDirectory(directory: string): ParseResult {
+export async function parseDirectory(directory: string, options: ParseOptions = {}): Promise<ParseResult> {
   const root = path.resolve(directory);
   if (!fs.statSync(root, { throwIfNoEntry: false })?.isDirectory()) {
     throw new Error(`Not a directory: ${directory}`);
@@ -44,9 +56,20 @@ export function parseDirectory(directory: string): ParseResult {
     compilerOptions: { allowJs: true, noResolve: true, noLib: true, jsx: ts.JsxEmit.Preserve },
   });
 
+  const progress: ParseProgress = { total: walked.files.length, read: 0, resolved: 0 };
+  const step = async (pass: "read" | "resolved") => {
+    progress[pass]++;
+    if (progress[pass] % YIELD_EVERY === 0 || progress[pass] === progress.total) {
+      options.onProgress?.({ ...progress });
+      await new Promise((resolve) => setImmediate(resolve));
+    }
+  };
+  options.onProgress?.({ ...progress });
+
   const files: FileEntry[] = [];
   const toParse: { rel: string; abs: string }[] = [];
   for (const f of walked.files) {
+    await step("read");
     if (f.symlink) {
       files.push({ path: f.rel, status: "skipped", reason: "symlink", detail: "symbolic links aren't followed" });
     } else if (f.size > MAX_FILE_BYTES) {
@@ -69,7 +92,11 @@ export function parseDirectory(directory: string): ParseResult {
   let importsFound = 0;
   let importsResolved = 0;
 
+  // Files skipped in the first pass have nothing to resolve.
+  for (let i = toParse.length; i < walked.files.length; i++) await step("resolved");
+
   for (const f of toParse) {
+    await step("resolved");
     const sf = project.getSourceFileOrThrow(`/${f.rel}`);
     const syntaxError = program.getSyntacticDiagnostics(sf)[0];
     if (syntaxError) {
