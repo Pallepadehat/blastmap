@@ -1,0 +1,22 @@
+name: Feature request
+description: Suggest a change in behaviour.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Blastmap is deliberately narrow. Before suggesting a feature, check it isn't one of the things it won't do: scores or grades, edges a parser didn't resolve, sign-in besides GitHub and GitLab, its own teams or roles, telemetry, or write access to a host. See [CONTRIBUTING.md](https://github.com/Pallepadehat/blastmap/blob/develop/CONTRIBUTING.md).
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you're trying to find out about a codebase, and why you can't today.
+    validations:
+      required: true
+  - type: textarea
+    id: behaviour
+    attributes:
+      label: The behaviour you'd like
+      description: Describe what someone would see and do, not how to build it.
+    validations:
+      required: true

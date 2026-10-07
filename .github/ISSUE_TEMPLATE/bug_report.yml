@@ -1,0 +1,42 @@
+name: Bug report
+description: Something doesn't work as it should.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: Steps, and a public repository that shows the problem if it's about parsing or the map.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The commit you're running (`git rev-parse --short HEAD`).
+    validations:
+      required: true
+  - type: dropdown
+    id: host
+    attributes:
+      label: Git host
+      options:
+        - GitHub
+        - gitlab.com
+        - Self-hosted GitLab
+        - Not host related
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant lines from `docker compose logs app`. Check they contain nothing private.
+      render: text

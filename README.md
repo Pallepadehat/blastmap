@@ -1,75 +1,107 @@
 # Blastmap
 
-A self-hosted app that reads a repository from GitHub or GitLab and draws it as
-a dependency map, from really parsing the code.
+Blastmap is a self-hosted app. It reads a repository from GitHub or GitLab and
+draws it as a dependency map. Every box and every line comes from really
+parsing the code. Nothing is guessed, and when something can't be resolved, the
+map says so.
 
-Early development: right now you can sign in with GitHub or GitLab, list the
-repositories you can read there, and open one. Mapping comes next.
+Sign in with the host your code lives on and pick a repository you can read.
+You get folders as boxes and imports as lines. Select a file to see what it
+imports, what imports it, and what breaks two levels out if it changes.
 
-## Run it
+> **Status: early development.** Signing in, mapping a repository, the coverage
+> report and the map all work. Framework awareness (routes, file roles) and the
+> AI panels are still to come. Expect breaking changes until a first release.
 
-You need Docker with Compose.
+## What it does
 
-1. `cp .env.example .env`
-2. Fill in `.env`:
-   - `BETTER_AUTH_SECRET`: run `openssl rand -base64 32` and paste the output.
-   - `BETTER_AUTH_URL`: the URL you'll open in the browser. Leave it as
-     `http://localhost:3000` for a local run.
-   - At least one git host: `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`, or
-     `GITLAB_CLIENT_ID` and `GITLAB_CLIENT_SECRET`. See
-     [Registering the OAuth application](#registering-the-oauth-application).
-   - Leave `DATABASE_URL` as it is to use the bundled Postgres.
-   - The `AI_*` variables are optional.
-3. `docker compose up`
+- **Maps TypeScript and JavaScript.** It reads imports, re-exports, dynamic
+  imports and `require()` calls. It resolves relative paths, tsconfig `paths`
+  aliases and workspace packages (pnpm, yarn, npm).
+- **Never guesses an edge.** A line exists only because an import resolved to a
+  real file. Every import that didn't resolve is listed with its reason in a
+  coverage report, and the map tells you when it's partial.
+- **Shows the blast radius.** For any file you see its importers, and theirs
+  one level further out. This is arithmetic in your browser, not a model's
+  opinion.
+- **Lets the host decide access.** You sign in with GitHub or GitLab, including
+  self-hosted GitLab. You see a repository's map only if that host says you can
+  read the repository. There's no second permission system to keep in sync.
+- **Keeps your code on your machines.** Code goes only to the git host it came
+  from and, once AI features land, to the AI endpoint you configure. No
+  telemetry, no analytics, no third-party tracing.
 
-The log shows the environment check, then the migration step. Open
-http://localhost:3000. `/api/health` reports whether the app can reach its
-database.
+### What it deliberately doesn't do
 
-If something in `.env` is missing or wrong, the container exits and lists every
+Blastmap explains a codebase; it doesn't review one. There are no scores,
+grades or "issues found". It also has no sign-in method besides GitHub and
+GitLab, and no teams or roles of its own. The reasoning behind these choices is
+in [`docs/project-doc.md`](docs/project-doc.md).
+
+## Quick start
+
+You need Docker with Compose, and an OAuth application registered on GitHub or
+GitLab.
+
+```sh
+git clone https://github.com/Pallepadehat/blastmap.git
+cd blastmap
+cp .env.example .env
+# Fill in .env: see "Configuration" below
+docker compose up
+```
+
+Open http://localhost:3000 and sign in.
+
+The full guide covers registering the OAuth application, running behind a
+reverse proxy, upgrading and backups: **[docs/deployment.md](docs/deployment.md)**.
+
+## Configuration
+
+All configuration is environment variables. They're checked at startup, and
+anything missing or malformed stops the container with a message naming every
 variable that needs fixing.
 
-## Registering the OAuth application
+| Variable                                     | Required                    | Purpose                                                                                     |
+| -------------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                               | yes                         | Postgres connection URL. The compose file's database is `postgres://blastmap:blastmap@db:5432/blastmap`. |
+| `BETTER_AUTH_SECRET`                         | yes                         | At least 32 random characters. Signs sessions and encrypts stored tokens. `openssl rand -base64 32` |
+| `BETTER_AUTH_URL`                            | yes                         | The public URL people open, e.g. `https://blastmap.example.com`.                            |
+| `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`   | one host required           | GitHub OAuth app. Set both or neither.                                                      |
+| `GITLAB_CLIENT_ID`, `GITLAB_CLIENT_SECRET`   | one host required           | GitLab application. Set both or neither.                                                    |
+| `GITLAB_URL`                                 | no                          | A self-hosted GitLab's address. Defaults to `https://gitlab.com`.                           |
+| `AI_BASE_URL`, `AI_API_KEY`, `AI_MODEL`      | no                          | An OpenAI-compatible endpoint. Set all three or none. Not used yet.                         |
 
-Sign-in goes through an OAuth application you register on each host you
-enable. In the steps below, `BETTER_AUTH_URL` is the public URL from your
-`.env`, e.g. `http://localhost:3000`. Every scope is read-only.
+## Limits
 
-### GitHub
+- **Size:** repositories over 500 MB, as the host reports them, are refused
+  before downloading. For GitHub, that figure includes git history.
+- **Concurrency:** one repository is mapped at a time per instance; others
+  queue.
+- **GitHub repositories:** only public ones. GitHub's OAuth scope for private
+  repositories also grants write access, which a read-only tool shouldn't hold.
+  Private repositories will come through a GitHub App.
+- **Languages:** TypeScript and JavaScript only.
 
-1. Go to GitHub → Settings → Developer settings → OAuth Apps → New OAuth App.
-   For an organization, use the organization's settings instead.
-2. Homepage URL: `BETTER_AUTH_URL`.
-3. Authorization callback URL: `BETTER_AUTH_URL/api/auth/callback/github`.
-4. Register, then generate a client secret. Put the Client ID and secret in
-   `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`.
+## Contributing
 
-Blastmap asks GitHub only for your profile and email, never for repository
-access, so it maps public repositories. Private GitHub repositories need a
-GitHub App with read-only contents permission, which isn't supported yet.
+Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first: the
+project works from written specs, and a few rules aren't negotiable. Report
+security issues privately, as described in [SECURITY.md](SECURITY.md).
 
-### GitLab
+## License
 
-1. On your GitLab instance go to User settings → Applications (or a group's or
-   the admin area's Applications page) → Add new application.
-2. Redirect URI: `BETTER_AUTH_URL/api/auth/callback/gitlab`.
-3. Keep Confidential ticked. Tick the scopes `read_user` and `read_api`, and
-   nothing else.
-4. Save. Put the Application ID and Secret in `GITLAB_CLIENT_ID` and
-   `GITLAB_CLIENT_SECRET`.
-5. For a self-hosted instance, set `GITLAB_URL` to its address, including any
-   base path, e.g. `https://git.example.com` or `https://example.com/gitlab`.
+Blastmap is licensed under the
+[Functional Source License, Version 1.1, ALv2 Future License](LICENSE.md)
+(FSL-1.1-ALv2).
 
-## Develop
+In plain terms:
 
-Node 24 and pnpm. The Docker image is a production build and doesn't hot
-reload, so for development run only Postgres in Docker and the app locally:
+- **You can:** use it, self-host it for yourself or your company, read it,
+  modify it, and contribute back.
+- **You can't:** sell it, or offer it as a product or service that competes with
+  Blastmap.
+- **Two years on:** each release becomes available under the Apache License 2.0,
+  with no restrictions.
 
-1. Create `.env.local` with the database's local address. Next prefers it over
-   `.env`, and the image never sees it:
-   `DATABASE_URL=postgres://blastmap:blastmap@localhost:5432/blastmap`
-2. `pnpm install`
-3. `docker compose up -d db`
-4. `pnpm dev`
-
-`pnpm check` runs types, lint and build.
+This is a summary, not legal advice; [LICENSE.md](LICENSE.md) is what counts.
