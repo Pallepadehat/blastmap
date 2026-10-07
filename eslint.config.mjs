@@ -2,17 +2,26 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 
+// One place reads the environment (CLAUDE.md).
+const PROCESS_ENV = {
+  object: "process",
+  property: "env",
+  message: "Read configuration through env() in src/server/env.ts.",
+};
+
+// Host tokens are read only inside host adapters (CLAUDE.md).
+const GET_ACCESS_TOKEN = {
+  property: "getAccessToken",
+  message: "Host tokens are read only inside the host adapters in src/server/hosts.",
+};
+
 export default defineConfig([
   ...nextVitals,
   ...nextTs,
   {
     rules: {
       "@typescript-eslint/no-explicit-any": "error",
-      // One place reads the environment (CLAUDE.md).
-      "no-restricted-properties": [
-        "error",
-        { object: "process", property: "env", message: "Read configuration through env() in src/server/env.ts." },
-      ],
+      "no-restricted-properties": ["error", PROCESS_ENV, GET_ACCESS_TOKEN],
     },
   },
   {
@@ -39,7 +48,11 @@ export default defineConfig([
   },
   {
     files: ["src/server/env.ts"],
-    rules: { "no-restricted-properties": "off" },
+    rules: { "no-restricted-properties": ["error", GET_ACCESS_TOKEN] },
+  },
+  {
+    files: ["src/server/hosts/**"],
+    rules: { "no-restricted-properties": ["error", PROCESS_ENV] },
   },
   globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts"]),
 ]);

@@ -63,7 +63,7 @@ function parse(source: NodeJS.ProcessEnv): Env {
   // meant to enable something and got it wrong, so it's an error, not
   // "disabled". These look at presence only, so they still run when a format
   // check above failed and the operator sees every problem in one go.
-  const present = (k: keyof Raw) => typeof source[k] === "string" && source[k] !== "";
+  const present = (k: string) => typeof source[k] === "string" && source[k] !== "";
   const allOrNone = (keys: (keyof Raw)[]): boolean => {
     const missing = keys.filter((k) => !present(k));
     if (missing.length === keys.length) return false;
@@ -81,6 +81,13 @@ function parse(source: NodeJS.ProcessEnv): Env {
       : ["GITLAB_CLIENT_ID", "GITLAB_CLIENT_SECRET"],
   );
   const hasAi = allOrNone(["AI_BASE_URL", "AI_API_KEY", "AI_MODEL"]);
+
+  // better-auth sends usage telemetry if this is set, whatever its own config
+  // says. Nothing leaves the instance except to the git host and the AI
+  // endpoint, so refuse to start rather than quietly allow it.
+  if (present("BETTER_AUTH_TELEMETRY")) {
+    problems.push("BETTER_AUTH_TELEMETRY must not be set: Blastmap sends no telemetry");
+  }
 
   const hostKeys = ["GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET", "GITLAB_URL", "GITLAB_CLIENT_ID", "GITLAB_CLIENT_SECRET"] as const;
   if (!hostKeys.some(present)) {
