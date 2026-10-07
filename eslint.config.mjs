@@ -16,6 +16,28 @@ export default defineConfig([
     },
   },
   {
+    // The parser is standalone: directory in, data out, runnable from a plain
+    // script. It can't depend on the app around it (CLAUDE.md).
+    files: ["src/parser/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["next", "next/*", "react", "react/*", "react-dom", "react-dom/*", "drizzle-orm", "drizzle-orm/*", "postgres"],
+              message: "The parser can't import the framework or the database.",
+            },
+            {
+              group: ["@/*", "**/server/**", "**/app/**", "**/components/**"],
+              message: "The parser can't import app code.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ["src/server/env.ts"],
     rules: { "no-restricted-properties": "off" },
   },

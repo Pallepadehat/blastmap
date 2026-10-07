@@ -10,7 +10,8 @@
     "typecheck": "next typegen && tsc --noEmit",
     "lint": "eslint .",
     "check": "pnpm typecheck && pnpm lint && pnpm build",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "parse": "node scripts/parse.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -22,6 +23,8 @@
     "postgres": "^3.4.9",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
+    "ts-morph": "^28.0.0",
+    "yaml": "^2.9.1",
     "zod": "^4.6.5"
   },
   "devDependencies": {
