@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+/* Greyscale surfaces and text. Accent, direction and kind colours arrive with
+   the phases that need them; nothing gets colour until it means something. */
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+:root {
+  color-scheme: light dark;
+  --bg: #fafafa;
+  --fg: #171717;
+  --muted: #737373;
+  --border: #e5e5e5;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0a0a0a;
+    --fg: #e5e5e5;
+    --muted: #8a8a8a;
+    --border: #262626;
+  }
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+}
